@@ -14,10 +14,7 @@ class MainActivity: FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "performTap") {
                 val action = call.argument<String>("action")
-                val x = call.argument<Double>("x")?.toFloat() ?: 0f
-                val y = call.argument<Double>("y")?.toFloat() ?: 0f
-                
-                AutoClickService.triggerAction(action, x, y)
+                AutoClickService.triggerAction(action)
                 result.success(null)
             } else {
                 result.notImplemented()
