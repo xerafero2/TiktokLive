@@ -1,19 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:piratetok_live/piratetok_live.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import 'overlay_ui.dart';
-
-// Entry point untuk background service overlay
-@pragma("vm:entry-point")
-void overlayMain() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: OverlayUI(),
-  ));
-}
 
 void main() {
   runApp(const App());
@@ -33,9 +20,7 @@ class App extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFDEFF9A),
             foregroundColor: Colors.black,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
         ),
@@ -56,29 +41,24 @@ class _MainScreenState extends State<MainScreen> {
   static const platform = MethodChannel('com.example.tiktok/autoclick');
   final TextEditingController _usernameController = TextEditingController();
   bool _isListening = false;
+  bool _isOverlayOpen = false;
   TikTokLiveClient? _client;
 
   Future<void> _startListening() async {
     if (_usernameController.text.isEmpty) return;
-
     setState(() => _isListening = true);
 
     _client = TikTokLiveClient(_usernameController.text);
     
-    _client?.onGift.listen((event) async {
+    _client?.onGift.listen((event) {
       final giftName = event.gift.name.toLowerCase();
-      final userId = event.user.id; 
       
-      debugPrint("Hadiah dari: $userId");
-
-      final prefs = await SharedPreferences.getInstance();
-
       if (giftName.contains("mawar") || giftName.contains("rose")) {
-        _triggerNativeTap('recall_3x', prefs.getDouble('recall_x') ?? 0, prefs.getDouble('recall_y') ?? 0);
+        _triggerNativeAction('recall_3x');
       } else if (giftName.contains("kopi") || giftName.contains("coffee")) {
-        _triggerNativeTap('skill_1', prefs.getDouble('skill1_x') ?? 0, prefs.getDouble('skill1_y') ?? 0);
+        _triggerNativeAction('skill_1');
       } else if (giftName.contains("donat") || giftName.contains("donut")) {
-        _triggerNativeTap('ultimate', prefs.getDouble('ulti_x') ?? 0, prefs.getDouble('ulti_y') ?? 0);
+        _triggerNativeAction('ultimate');
       }
     });
 
@@ -89,24 +69,17 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  Future<void> _triggerNativeTap(String action, double x, double y) async {
+  Future<void> _triggerNativeAction(String action) async {
     try {
-      await platform.invokeMethod('performTap', {'action': action, 'x': x, 'y': y});
-    } on PlatformException catch (e) {
-      debugPrint("Error eksekusi: ${e.message}");
+      await platform.invokeMethod('performTap', {'action': action});
+    } catch (e) {
+      debugPrint("Error eksekusi: \${e}");
     }
   }
 
-  Future<void> _openOverlay() async {
-    if (await FlutterOverlayWindow.isActive()) return;
-    await FlutterOverlayWindow.showOverlay(
-      enableDrag: false,
-      overlayTitle: "Pengaturan Posisi",
-      overlayContent: "Atur posisi tombol",
-      flag: OverlayFlag.focusPointer,
-      visibility: NotificationVisibility.visibilityPublic,
-      positionGravity: PositionGravity.none,
-    );
+  Future<void> _toggleOverlay() async {
+    setState(() => _isOverlayOpen = !_isOverlayOpen);
+    _triggerNativeAction(_isOverlayOpen ? 'show_overlay' : 'hide_overlay');
   }
 
   @override
@@ -129,23 +102,18 @@ class _MainScreenState extends State<MainScreen> {
                 labelStyle: const TextStyle(color: Colors.white70),
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _openOverlay,
-              icon: const Icon(Icons.settings_overscan),
-              label: const Text('Atur Posisi Koordinat'),
+            ElevatedButton(
+              onPressed: _toggleOverlay,
+              child: Text(_isOverlayOpen ? 'Tutup Pengaturan Posisi' : 'Atur Posisi Koordinat'),
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
+            ElevatedButton(
               onPressed: _isListening ? null : _startListening,
-              icon: const Icon(Icons.play_arrow),
-              label: Text(_isListening ? 'Sistem Berjalan' : 'Mulai Integrasi'),
+              child: Text(_isListening ? 'Sistem Berjalan' : 'Mulai Integrasi'),
             ),
           ],
         ),
