@@ -29,15 +29,29 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Force Inject V2 Embedding
+      - name: Force Overwrite AndroidManifest (Ultimate Fix)
         run: |
-          # Memaksa penghapusan tag lama (jika ada) untuk menghindari duplikasi
-          sed -i '/android:name="flutterEmbedding"/d' android/app/src/main/AndroidManifest.xml
-          # Menginjeksi tag V2 tepat di bawah elemen <application>
-          sed -i '/<application/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
-          # Menampilkan isi file ke log Actions untuk verifikasi visual
-          echo "=== ISI ANDROID MANIFEST SAAT INI ==="
-          cat android/app/src/main/AndroidManifest.xml
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.tiktok_interactive">
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+              <application android:label="tiktok_interactive" android:name="${applicationName}" android:icon="@mipmap/ic_launcher">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+                  <meta-data android:name="flutterEmbedding" android:value="2" />
+                  <service android:name=".AutoClickService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.accessibilityservice.AccessibilityService" />
+                      </intent-filter>
+                      <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_service_config" />
+                  </service>
+              </application>
+          </manifest>
+          EOF
 
       - name: Build APK Release
         run: flutter build apk --release -v
