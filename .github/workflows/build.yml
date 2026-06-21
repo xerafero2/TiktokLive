@@ -23,11 +23,21 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Install Dependencies
+      - name: Clean Workspace
         run: flutter clean
 
       - name: Install Dependencies
         run: flutter pub get
+
+      - name: Force Inject V2 Embedding
+        run: |
+          # Memaksa penghapusan tag lama (jika ada) untuk menghindari duplikasi
+          sed -i '/android:name="flutterEmbedding"/d' android/app/src/main/AndroidManifest.xml
+          # Menginjeksi tag V2 tepat di bawah elemen <application>
+          sed -i '/<application/a \        <meta-data android:name="flutterEmbedding" android:value="2" />' android/app/src/main/AndroidManifest.xml
+          # Menampilkan isi file ke log Actions untuk verifikasi visual
+          echo "=== ISI ANDROID MANIFEST SAAT INI ==="
+          cat android/app/src/main/AndroidManifest.xml
 
       - name: Build APK Release
         run: flutter build apk --release -v
